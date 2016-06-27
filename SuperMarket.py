@@ -22,8 +22,11 @@ class Arrivals(Process):
             c = Client(str(i),type,random.uniform(1,maxCartSize)) 
             activate(c, c.run(boringServiceRate,awsmeServiceRate))
             # calcula el tiempo del prox arribo...
-            if(arrivals[r] >= i & i != 0):
+            if(arrivals[r] >= i & i!=0):
                 r+=1  #cambia la tasa de arribo para el tiempo especificado
+                print "**********************************************"
+                print "* TASA DE ARRIBO: ",clientArrivalsRate[r],"                        *"
+                print "**********************************************"
             t = random.expovariate(1. / clientArrivalsRate[r])
             yield hold, self, t
             i+=1
@@ -40,6 +43,7 @@ class Client(Process):
 
        
     def run(self,boringServiceRate,awsmeServiceRate):
+
         print now(),"Arribo Cliente ",self.id
 
         if(self.type == "smartClient"): #Cliente inteligente
@@ -53,11 +57,12 @@ class Client(Process):
                     allBoringBussy = False
                     yield request,self,G.boringCashRegister[i]
                     print now(),"Cliente ",self.id, "entra en caja ",G.boringCashRegister[i].name
-                    bt = random.expovariate(1. / boringServiceRate)
+                    bt = random.uniform(1,boringServiceRate)
                     print now(),G.boringCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
                     yield hold,self,bt
                     yield release,self,G.boringCashRegister[i]
                     print now(),"Fin Cliente",self.id
+                    break
                 elif(bQQ < minBoringCashRegisterQQ):
                     minBoringCashRegisterQQ = bQQ       
                     boringCashRegisterIndex = i
@@ -66,7 +71,7 @@ class Client(Process):
                 if(minBoringCashRegisterQQ < len(G.awsemCashRegisterManager.waitQ)):  ## compara cual de los 2 tipos tiene menos
                     yield request,self,G.boringCashRegister[boringCashRegisterIndex]         
                     print now(),"Cliente ",self.id, "entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name       
-                    bt = random.expovariate(1. / boringServiceRate)
+                    bt = random.uniform(1,boringServiceRate)
                     print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
                     yield hold,self,bt       
                     yield release,self,G.boringCashRegister[boringCashRegisterIndex]
@@ -77,11 +82,11 @@ class Client(Process):
                     while (CRsbBussy):  # ADMINISTRADOR DE CAJAS busca cajas de una sola cola libre
                         for i in range(len(G.awsmeCashRegister)):
                             if(len(G.awsmeCashRegister[i].waitQ) == 0): # cuando encuentra una le asigna el turno al primer cliente de la cola
-                                print now(),"Cliente ",self.id, "entra en caja ",G.G.awsmeCashRegister[i].name
+                                print now(),"Cliente ",self.id, "entra en caja ",G.awsmeCashRegister[i].name
                                 CRsbBussy = False
                                 yield release,self,G.awsemCashRegisterManager
                                 yield request,self,G.awsmeCashRegister[i]
-                                at = random.expovariate(1. / awsmeServiceRate)
+                                at = random.uniform(1,awsmeServiceRate)
                                 print now(),G.awsmeCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",at
                                 yield hold,self,at
                                 yield release,self,G.awsmeCashRegister[i]
@@ -94,7 +99,7 @@ class Client(Process):
                 selectedCashRegister = int(random.uniform(0,len(G.boringCashRegister)-1))
                 yield request,self,G.boringCashRegister[selectedCashRegister]
                 print now(),"Cliente Dummy ",self.id, "entra en caja ",G.boringCashRegister[selectedCashRegister].name
-                bt = random.expovariate(1. / boringServiceRate)
+                bt = random.uniform(1,boringServiceRate)
                 print now(),G.boringCashRegister[selectedCashRegister].name,"atiende el Cliente Dummy ",self.id, " en un tiempo de ",bt
                 yield hold,self,bt
                 yield release,self,G.boringCashRegister[selectedCashRegister]
@@ -106,15 +111,15 @@ class Client(Process):
                 while (CRsbBussy):  # ADMINISTRADOR DE CAJAS busca cajas de una sola cola libre
                         for i in range(len(G.awsmeCashRegister)):
                             if(len(G.awsmeCashRegister[i].waitQ) == 0): # cuando encuentra una le asigna el turno al primer cliente de la cola
-                                print now(),"Cliente ",self.id, "entra en caja ",G.awsmeCashRegister[i].name
+                                print now(),"Cliente Dummy ",self.id, "entra en caja ",G.awsmeCashRegister[i].name
                                 CRsbBussy = False
                                 yield release,self,G.awsemCashRegisterManager
                                 yield request,self,G.awsmeCashRegister[i]
-                                at = random.expovariate(1. / awsmeServiceRate)
-                                print now(),G.awsmeCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",at
+                                at = random.uniform(1,awsmeServiceRate)
+                                print now(),G.awsmeCashRegister[i].name,"atiende el Cliente Dummy ",self.id, " en un tiempo de ",at
                                 yield hold,self,at
                                 yield release,self,G.awsmeCashRegister[i]
-                                print now(),"Fin Cliente",self.id
+                                print now(),"Fin Cliente Dummy",self.id
                                 break
                
 
@@ -133,12 +138,14 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
 
         # server definition
         cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY)
-        G.awsemCashRegisterManager = Resource(capacity=1,monitored=True)
+        G.awsemCashRegisterManager = Resource(capacity=1,name="admin",monitored=True)
         
         #  exectuion
         a = Arrivals()
         activate(a, a.run(clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate))
         simulate(until=maxtime)
 
+        # statistics
 
-model(2000,1,0.00002,8,0.2,{0: 0.9, 1000: 0.7, 3000: 0.5},50)
+
+model(10000,2,15,2,15,{0: 5, 200: 10, 300: 99},100)
