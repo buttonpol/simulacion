@@ -30,6 +30,7 @@ class Arrivals(Process):
     def run(self,clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate):
         i = 0
         r = 0
+        lastRateVisited = False
         arrivals = clientArrivalsRate.keys()
         while(True):    
             
@@ -40,14 +41,19 @@ class Arrivals(Process):
             c = Client(str(i),type,random.uniform(1,maxCartSize)) 
             activate(c, c.run(boringServiceRate,awsmeServiceRate))
             # calcula el tiempo del prox arribo...
-            if(arrivals[r] >= i & i!=0):
+            if(i != 0 and arrivals[r] <= int(now()) and lastRateVisited == False):
                 r+=1  #cambia la tasa de arribo para el tiempo especificado
-                print "**********************************************"
-                print "* TASA DE ARRIBO: ",clientArrivalsRate[r],"                        *"
-                print "**********************************************"
-            t = random.expovariate(1. / clientArrivalsRate[r])
+                if(r < len(arrivals)):
+                    print "**********************************************"
+                    print "* TASA DE ARRIBO: ",clientArrivalsRate[arrivals[r]],"                        *"
+                    print "**********************************************"
+                else:
+                    r-=1
+                    lastRateVisited = True
+            t = random.expovariate(1. / clientArrivalsRate[arrivals[r]])
             yield hold, self, t
             i+=1
+
 
 
 class Client(Process):
@@ -141,7 +147,7 @@ class Client(Process):
                                 break
                
 def resetMonitoresReplica():
-    G.awsemCashRegisterManager.reset()
+   # G.awsemCashRegisterManager.reset()
     G.awsemCashWaitTime.reset()
     G.boringCashWaitTime.reset()
     G.fastCashRegisterWaitTime.reset()
@@ -181,21 +187,22 @@ def cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY):
 
 def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize, replicas):
     resetMonitoresTotales()
-    for r in range(replicas):
 
-        initialize()
-        resetMonitoresReplica()
+    initialize()
+    for r in range(replicas):
+        
         # server definition
         cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY)
         G.awsemCashRegisterManager = Resource(capacity=1,name="admin",monitored=True)
-        
+        resetMonitoresReplica()
+
         #  exectuion
         a = Arrivals()
         activate(a, a.run(clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate))
         simulate(until=maxtime)
 
         # statistics
-        saveStatistics()
+       # saveStatistics()
 
 
 
@@ -206,11 +213,15 @@ bsr = 15
 awsr = 15
 maxCS = 100
 totalCashRegisters = 10
-cantReplicas = 100 #cantidad de replicas por simulacion
+cantReplicas = 2 #cantidad de replicas por simulacion
 fastCashRegister = 1 #cantidad de cajas rápidas
 
 #Comparar las combinaciones de cantidad de cajas
-for i in range(totalCashRegisters -1):
-    model(maxtime=maxTimeSim, boringCashRegisterQTY=i, boringServiceRate=bsr,
-          awsmeCashRegisterQTY=totalCashRegisters-i, awsmeServiceRate=awsr,
+#for i in range(totalCashRegisters -1):
+#    model(maxtime=maxTimeSim, boringCashRegisterQTY=i, boringServiceRate=bsr,
+#          awsmeCashRegisterQTY=totalCashRegisters-i, awsmeServiceRate=awsr,
+#          clientArrivalsRate={0: 5, 200: 10, 300: 99}, maxCartSize=maxCS, replicas=cantReplicas)
+
+model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,
+          awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
           clientArrivalsRate={0: 5, 200: 10, 300: 99}, maxCartSize=maxCS, replicas=cantReplicas)
