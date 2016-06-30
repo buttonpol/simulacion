@@ -3,10 +3,28 @@ import random
 import numpy as np
 import math
 
+
+#variables para mostrar resultados
+resAvgWaitingBoringCR = 0
+resAvgWaitingAwsCR = 0
+resAvgWatingFastCR  = 0
+resAvgServiceBoringCR = 0
+resAvgServiceAwsCR = 0
+resAvgServiceFastCR = 0
+
+
+
 class G:
     boringCashRegister = [] # Cajas individuales con una cola por caja
     awsmeCashRegister = []  # Cajas con una cola para todas las cajas
     awsemCashRegisterManager = "Administrador de cajas de una sola cola" #vendria ser el cartel q le dice al cliente a q caja tiene q ir
+    awsemCashWaitTime = Monitor('Tiempo de espera en cajas compartidas')
+    boringCashWaitTime = Monitor('Tiempo de espera en cajas individuales')
+    fastCashRegisterWaitTime = Monitor('Tiempo de espera en cajas rapidas')
+    awsemCashServiceTime = Monitor('Tiempo de espera en cajas compartidas')
+    boringCashServiceTime = Monitor('Tiempo de espera en cajas individuales')
+    fastCashRegisterServiceTime = Monitor('Tiempo de espera en cajas rapidas')
+
 class Arrivals(Process):
     
     def run(self,clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate):
@@ -122,6 +140,35 @@ class Client(Process):
                                 print now(),"Fin Cliente Dummy",self.id
                                 break
                
+def resetMonitoresReplica():
+    G.awsemCashRegisterManager.reset()
+    G.awsemCashWaitTime.reset()
+    G.boringCashWaitTime.reset()
+    G.fastCashRegisterWaitTime.reset()
+    G.awsemCashServiceTime.reset()
+    G.boringCashServiceTime.reset()
+    G.fastCashRegisterServiceTime.reset()
+
+def resetMonitoresTotales():
+    global resAvgWaitingBoringCR, resAvgWaitingAwsCR, resAvgServiceBoringCR, resAvgServiceAwsCR, resAvgServiceFastCR
+
+    resAvgWaitingBoringCR = 0
+    resAvgWaitingAwsCR = 0
+    resAvgServiceBoringCR = 0
+    resAvgServiceAwsCR = 0
+    resAvgServiceFastCR = 0
+
+
+
+def saveStatistics():
+    global resAvgWaitingBoringCR, resAvgWaitingAwsCR, resAvgServiceBoringCR, resAvgServiceAwsCR, resAvgServiceFastCR, resAvgWatingFastCR
+
+    resAvgWaitingBoringCR.observe(G.boringCashWaitTime.count())
+    resAvgWaitingAwsCR.observe(G.awsemCashWaitTime.count())
+    resAvgWatingFastCR.observe(G.fastCashRegisterWaitTime.count())
+    resAvgServiceBoringCR.observe(G.boringCashServiceTime.count())
+    resAvgServiceAwsCR.observe(G.awsemCashServiceTime.count())
+    resAvgServiceFastCR.observe(G.fastCashRegisterServiceTime.count())
 
 
 def cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY):
@@ -132,10 +179,12 @@ def cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY):
     
 
 
-def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize):  
+def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize, replicas):
+    resetMonitoresTotales()
+    for r in range(replicas):
 
         initialize()
-
+        resetMonitoresReplica()
         # server definition
         cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY)
         G.awsemCashRegisterManager = Resource(capacity=1,name="admin",monitored=True)
@@ -146,6 +195,22 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
         simulate(until=maxtime)
 
         # statistics
+        saveStatistics()
 
 
-model(10000,2,15,2,15,{0: 5, 200: 10, 300: 99},100)
+
+
+
+maxTimeSim = 10000
+bsr = 15
+awsr = 15
+maxCS = 100
+totalCashRegisters = 10
+cantReplicas = 100 #cantidad de replicas por simulacion
+fastCashRegister = 1 #cantidad de cajas rápidas
+
+#Comparar las combinaciones de cantidad de cajas
+for i in range(totalCashRegisters -1):
+    model(maxtime=maxTimeSim, boringCashRegisterQTY=i, boringServiceRate=bsr,
+          awsmeCashRegisterQTY=totalCashRegisters-i, awsmeServiceRate=awsr,
+          clientArrivalsRate={0: 5, 200: 10, 300: 99}, maxCartSize=maxCS, replicas=cantReplicas)
