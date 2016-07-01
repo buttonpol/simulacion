@@ -394,5 +394,5 @@ cantReplicas = 5  # cantidad de replicas por simulacion
 #de arribos hasta el medio dia luego de 240 minutos (4hs) es decir 12 am q
 #comienza a incrmentar tasa de arribo LUEGO desp de las (360) 3pm baja
 #nuevamente la tasa de arribos hasta las 8pm donde comienza otra ora pico
-model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
-          clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5}, maxCartSize=100, replicas=cantReplicas)
+model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=0, awsmeServiceRate=awsr,
+          clientArrivalsRate={0: 8, 240: 1, 360: 5, 720: 0.5}, maxCartSize=100, replicas=cantReplicas)
