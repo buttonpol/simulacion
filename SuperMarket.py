@@ -128,8 +128,9 @@ class Client(Process):
                     boringCashRegisterIndex = i
                   
             if(allBoringBussy):
-                individuals = np.sum(G.elementsInQueueBCR) + G.elementsInQueueFCR
-                paralels = len(G.awsmeCashRegisterManager.activeQ) + G.elementsInQueueACR / G.awsmeCashRegisterQTY
+                individuals = (np.sum(G.elementsInQueueBCR) + G.elementsInQueueFCR) / len(G.boringCashRegister)
+                paralels = (len(G.awsmeCashRegisterManager.activeQ) + G.elementsInQueueACR) / G.awsmeCashRegisterQTY
+                print 'len(G.awsmeCashRegisterManager.activeQ)', len(G.awsmeCashRegisterManager.activeQ), ' ; G.elementsInQueueACR', G.elementsInQueueACR, '; G.awsmeCashRegisterQTY ',  G.awsmeCashRegisterQTY
                 if (individuals < paralels):
             #if(minBoringCashRegisterQQ < int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):  ## compara cual de los 2 tipos tiene menos
                     print now(),"Cliente ",self.id, "llegado hace ",now()-self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
