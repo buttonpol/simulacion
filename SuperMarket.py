@@ -92,79 +92,156 @@ class Client(Process):
 
         if(self.type == "smartClient"): #Cliente inteligente
 
-            minBoringCashRegisterQQ = sys.maxint
-            boringCashRegisterIndex = 0
-            allBoringBussy = True
-            for i in range(len(G.boringCashRegister)):  # busca cajas individuales libres
-                bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ)
-                #bQQ = elementsInQueueBCR[i]+
-                #len(G.boringCashRegister[i].activeQ )
-                if(bQQ == 0):
-                    print now(), ' Cliente ', self.id, " encontro caja ",G.boringCashRegister[i].name," vacia"
-                    allBoringBussy = False
-                    yield request,self,G.boringCashRegister[i]
-                    G.boringCashWaitTime.observe(now() - self.arrivalTime)
-                    elementsInQueueBCR[i] = elementsInQueueBCR[i] + self.cartQty
-                    print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
+            firstCheckBoring = random.uniform(0,1)
+            if(firstCheckBoring<0.50): #mira primero las cajas individuales
+
+                minBoringCashRegisterQQ = sys.maxint
+                boringCashRegisterIndex = 0
+                allBoringBussy = True
+                for i in range(len(G.boringCashRegister)):  # busca cajas individuales libres
+                    bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ)
+                    #bQQ = elementsInQueueBCR[i]+
+                    #len(G.boringCashRegister[i].activeQ )
+                    if(bQQ == 0):
+                        print now(), ' Cliente ', self.id, " encontro caja ",G.boringCashRegister[i].name," vacia"
+                        allBoringBussy = False
+                        yield request,self,G.boringCashRegister[i]
+                        G.boringCashWaitTime.observe(now() - self.arrivalTime)
+                        elementsInQueueBCR[i] = elementsInQueueBCR[i] + self.cartQty
+                        print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
                     
-                    bt = random.uniform(0.1,boringServiceRate) * self.cartQty
-                    G.boringCashServiceTime.observe(bt)
-                    print now(),G.boringCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
-                    yield hold,self,bt
-                    yield release,self,G.boringCashRegister[i]
-                    G.actMonBor.observe(1)
-                    elementsInQueueBCR[i] = elementsInQueueBCR[i] - self.cartQty
-                    print now(),"Fin Cliente",self.id
-                    break
-                elif(bQQ < minBoringCashRegisterQQ):
-                    minBoringCashRegisterQQ = bQQ       
-                    boringCashRegisterIndex = i
+                        bt = random.uniform(0.1,boringServiceRate) * self.cartQty
+                        G.boringCashServiceTime.observe(bt)
+                        print now(),G.boringCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
+                        yield hold,self,bt
+                        yield release,self,G.boringCashRegister[i]
+                        G.actMonBor.observe(1)
+                        elementsInQueueBCR[i] = elementsInQueueBCR[i] - self.cartQty
+                        print now(),"Fin Cliente",self.id
+                        break
+                    elif(bQQ < minBoringCashRegisterQQ):
+                        minBoringCashRegisterQQ = bQQ       
+                        boringCashRegisterIndex = i
                   
-            if(allBoringBussy):
-                #individuals = (np.sum(elementsInQueueBCR) +
-                #elementsInQueueFCR) / len(G.boringCashRegister)
-                #paralels = (len(G.awsmeCashRegisterManager.waitQ) +
-                #elementsInQueueACR) / G.awsmeCashRegisterQTY
+                if(allBoringBussy):
+                    #individuals = (np.sum(elementsInQueueBCR) +
+                    #elementsInQueueFCR) / len(G.boringCashRegister)
+                    #paralels = (len(G.awsmeCashRegisterManager.waitQ) +
+                    #elementsInQueueACR) / G.awsmeCashRegisterQTY
 
 
-                individuals = len(G.boringCashRegister[boringCashRegisterIndex].waitQ) + len(G.boringCashRegister[boringCashRegisterIndex].activeQ)
-                paralels = (len(G.awsmeCashRegisterManager.waitQ) + len(G.awsmeCashRegisterManager.activeQ)) / G.awsmeCashRegisterQTY
+                    individuals = len(G.boringCashRegister[boringCashRegisterIndex].waitQ) + len(G.boringCashRegister[boringCashRegisterIndex].activeQ)
+                    paralels = (len(G.awsmeCashRegisterManager.waitQ) + len(G.awsmeCashRegisterManager.activeQ)) / G.awsmeCashRegisterQTY
 
-                #print 'len(G.awsmeCashRegisterManager.activeQ)',
-                #len(G.awsmeCashRegisterManager.activeQ), ' ;
-                #elementsInQueueACR', elementsInQueueACR, ';
-                #G.awsmeCashRegisterQTY ', G.awsmeCashRegisterQTY
-                if (individuals < paralels):
-            #if(minBoringCashRegisterQQ <
-            #int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):
-            ### compara cual de los 2 tipos tiene menos
-                    print now(),"Cliente ",self.id, "llegado hace ",now() - self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
-                    yield request,self,G.boringCashRegister[boringCashRegisterIndex]
-                    G.boringCashWaitTime.observe(now() - self.arrivalTime)
-                    #print 'hola ', elementsInQueueACR
-                    #elementsInQueueACR = elementsInQueueACR + self.cartQty
-                    #print 'chau ', elementsInQueueACR
-                    print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
-                    bt = random.uniform(0.1,boringServiceRate) * self.cartQty
-                    G.boringCashServiceTime.observe(bt)
-                    print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
-                    yield hold,self,bt       
-                    yield release,self,G.boringCashRegister[boringCashRegisterIndex]
-                    G.actMonBor.observe(1)
-                    #elementsInQueueACR = elementsInQueueACR - self.cartQty
-                    print now(),"Fin Cliente",self.id
-                else:
-                    print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
-                    yield request,self,G.awsmeCashRegisterManager
-                    print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
-                    G.awsemCashWaitTime.observe(now() - self.arrivalTime)
-                    at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
-                    G.awsemCashServiceTime.observe(at)
-                    print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
-                    yield hold,self,at
-                    yield release,self,G.awsmeCashRegisterManager
-                    G.actMonAws.observe(1)
-                    print now(),"Fin Cliente",self.id
+                    #print 'len(G.awsmeCashRegisterManager.activeQ)',
+                    #len(G.awsmeCashRegisterManager.activeQ), ' ;
+                    #elementsInQueueACR', elementsInQueueACR, ';
+                    #G.awsmeCashRegisterQTY ', G.awsmeCashRegisterQTY
+                    if (individuals < paralels):
+                #if(minBoringCashRegisterQQ <
+                #int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):
+                ### compara cual de los 2 tipos tiene menos
+                        print now(),"Cliente ",self.id, "llegado hace ",now() - self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                        yield request,self,G.boringCashRegister[boringCashRegisterIndex]
+                        G.boringCashWaitTime.observe(now() - self.arrivalTime)
+                        #print 'hola ', elementsInQueueACR
+                        #elementsInQueueACR = elementsInQueueACR + self.cartQty
+                        #print 'chau ', elementsInQueueACR
+                        print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                        bt = random.uniform(0.1,boringServiceRate) * self.cartQty
+                        G.boringCashServiceTime.observe(bt)
+                        print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
+                        yield hold,self,bt       
+                        yield release,self,G.boringCashRegister[boringCashRegisterIndex]
+                        G.actMonBor.observe(1)
+                        #elementsInQueueACR = elementsInQueueACR - self.cartQty
+                        print now(),"Fin Cliente",self.id
+                    else:
+                        print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
+                        yield request,self,G.awsmeCashRegisterManager
+                        print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
+                        G.awsemCashWaitTime.observe(now() - self.arrivalTime)
+                        at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
+                        G.awsemCashServiceTime.observe(at)
+                        print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
+                        yield hold,self,at
+                        yield release,self,G.awsmeCashRegisterManager
+                        G.actMonAws.observe(1)
+                        print now(),"Fin Cliente",self.id
+                
+                else: #mira primero la caja de una sola cola
+                    paralels = (len(G.awsmeCashRegisterManager.waitQ) + len(G.awsmeCashRegisterManager.activeQ)) / G.awsmeCashRegisterQTY
+                    if(paralels==0):
+                        print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
+                        yield request,self,G.awsmeCashRegisterManager
+                        print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
+                        G.awsemCashWaitTime.observe(now() - self.arrivalTime)
+                        at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
+                        G.awsemCashServiceTime.observe(at)
+                        print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
+                        yield hold,self,at
+                        yield release,self,G.awsmeCashRegisterManager
+                        G.actMonAws.observe(1)
+                        print now(),"Fin Cliente",self.id
+                    else:
+                        minBoringCashRegisterQQ = sys.maxint
+                        boringCashRegisterIndex = 0
+                        for i in range(len(G.boringCashRegister)):  # busca cajas individuales libres
+                            bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ)
+                            #bQQ = elementsInQueueBCR[i]+
+                            #len(G.boringCashRegister[i].activeQ )
+                            if(bQQ == 0):
+                                print now(), ' Cliente ', self.id, " encontro caja ",G.boringCashRegister[i].name," vacia"
+                                yield request,self,G.boringCashRegister[i]
+                                G.boringCashWaitTime.observe(now() - self.arrivalTime)
+                                elementsInQueueBCR[i] = elementsInQueueBCR[i] + self.cartQty
+                                print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
+                    
+                                bt = random.uniform(0.1,boringServiceRate) * self.cartQty
+                                G.boringCashServiceTime.observe(bt)
+                                print now(),G.boringCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
+                                yield hold,self,bt
+                                yield release,self,G.boringCashRegister[i]
+                                G.actMonBor.observe(1)
+                                elementsInQueueBCR[i] = elementsInQueueBCR[i] - self.cartQty
+                                print now(),"Fin Cliente",self.id
+                                break
+                            elif(bQQ < minBoringCashRegisterQQ):
+                                minBoringCashRegisterQQ = bQQ       
+                                boringCashRegisterIndex = i
+                        if (minBoringCashRegisterQQ < paralels):
+                            #if(minBoringCashRegisterQQ <
+                            #int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):
+                            ### compara cual de los 2 tipos tiene menos
+                            print now(),"Cliente ",self.id, "llegado hace ",now() - self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                            yield request,self,G.boringCashRegister[boringCashRegisterIndex]
+                            G.boringCashWaitTime.observe(now() - self.arrivalTime)
+                            #print 'hola ', elementsInQueueACR
+                            #elementsInQueueACR = elementsInQueueACR + self.cartQty
+                            #print 'chau ', elementsInQueueACR
+                            print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                            bt = random.uniform(0.1,boringServiceRate) * self.cartQty
+                            G.boringCashServiceTime.observe(bt)
+                            print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
+                            yield hold,self,bt       
+                            yield release,self,G.boringCashRegister[boringCashRegisterIndex]
+                            G.actMonBor.observe(1)
+                            #elementsInQueueACR = elementsInQueueACR - self.cartQty
+                            print now(),"Fin Cliente",self.id
+                        else:
+                            print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
+                            yield request,self,G.awsmeCashRegisterManager
+                            print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
+                            G.awsemCashWaitTime.observe(now() - self.arrivalTime)
+                            at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
+                            G.awsemCashServiceTime.observe(at)
+                            print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
+                            yield hold,self,at
+                            yield release,self,G.awsmeCashRegisterManager
+                            G.actMonAws.observe(1)
+                            print now(),"Fin Cliente",self.id
+
+
         else: #cliente dummy
             
             if (random.uniform(0,1) < 0.50): #entra aleatoriamente en una caja individual
@@ -290,7 +367,7 @@ bsr = 0.5
 awsr = 0.5
 maxCS = 50
 totalCashRegisters = 10
-cantReplicas = 5  # cantidad de replicas por simulacion
+cantReplicas = 10  # cantidad de replicas por simulacion
 fastCashRegister = 1  # cantidad de cajas rpidas
 
 #clientArrivalsRate={0: 1, 500: 2, 800: 5} el super comienza su actividad 8 am,
