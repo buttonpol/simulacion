@@ -49,6 +49,8 @@ class G:
     elementsInQueueBCR = [] # contador de elementos en la cola de las cajas individuales
     elementsInQueueACR = 0 # contador de elementos en la cola de las cajas individuales
     elementsInQueueFCR = 0 # contador de elementos en la cola de las cajas individuales
+    timesFreeBoringCR = 0
+    timesFreeAwesomeCR=0
 
 
 class Arrivals(Process):
@@ -103,14 +105,14 @@ class Client(Process):
             allBoringBussy = True
             for i in range(len(G.boringCashRegister)):  # busca cajas individuales libres
                 #bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ )
-                bQQ = G.elementsInQueueBCR[i]
+                bQQ = G.elementsInQueueBCR[i]+ len(G.boringCashRegister[i].activeQ )
                 if(bQQ == 0):
-                    print "encontre caja ",G.boringCashRegister[i].name," vacia"
+                    print now(), ' Cliente ', self.id, " encontro caja ",G.boringCashRegister[i].name," vacia"
                     allBoringBussy = False
                     yield request,self,G.boringCashRegister[i]
                     G.boringCashWaitTime.observe(now() - self.arrivalTime)
                     G.elementsInQueueBCR[i] = G.elementsInQueueBCR[i] + self.cartQty
-                    print now(),"Cliente ",self.id, "entra en caja ",G.boringCashRegister[i].name
+                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
                     
                     bt = random.uniform(1,boringServiceRate)*self.cartQty
                     G.boringCashServiceTime.observe(bt)
@@ -127,21 +129,23 @@ class Client(Process):
                   
             if(allBoringBussy):
                 individuals = np.sum(G.elementsInQueueBCR) + G.elementsInQueueFCR
-                paralels = len(G.awsmeCashRegisterManager.activeQ) / G.awsmeCashRegisterQTY
+                paralels = len(G.awsmeCashRegisterManager.activeQ) + G.elementsInQueueACR / G.awsmeCashRegisterQTY
                 if (individuals < paralels):
             #if(minBoringCashRegisterQQ < int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):  ## compara cual de los 2 tipos tiene menos
                     yield request,self,G.boringCashRegister[boringCashRegisterIndex]   
-                    G.boringCashWaitTime.observe(now()-self.arrivalTime)      
-                    print now(),"Cliente ",self.id, "entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name       
+                    G.boringCashWaitTime.observe(now()-self.arrivalTime)
+                    G.elementsInQueueACR = G.elementsInQueueACR + self.cartQty
+                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
                     bt = random.uniform(1,boringServiceRate)*self.cartQty
                     G.boringCashServiceTime.observe(bt)
                     print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
                     yield hold,self,bt       
                     yield release,self,G.boringCashRegister[boringCashRegisterIndex]
                     G.actMonBor.observe(1)
+                    G.elementsInQueueACR = G.elementsInQueueACR - self.cartQty
                     print now(),"Fin Cliente",self.id
                 else:
-                    print now(),"Cliente ",self.id, "entra en caja ",G.awsmeCashRegisterManager.name
+                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.awsmeCashRegisterManager.name
                     yield request,self,G.awsmeCashRegisterManager
                     G.awsemCashWaitTime.observe(now()-self.arrivalTime)
                     at = random.uniform(1,awsmeServiceRate)*self.cartQty
@@ -157,7 +161,7 @@ class Client(Process):
                 selectedCashRegister = int(random.uniform(0,len(G.boringCashRegister)-1))
                 yield request,self,G.boringCashRegister[selectedCashRegister]
                 G.boringCashWaitTime.observe(now()-self.arrivalTime)
-                print now(),"Cliente Dummy ",self.id, "entra en caja ",G.boringCashRegister[selectedCashRegister].name
+                print now(),"Cliente Dummy ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[selectedCashRegister].name
                 bt = random.uniform(1,boringServiceRate)*self.cartQty
                 G.boringCashServiceTime.observe(bt)
                 print now(),G.boringCashRegister[selectedCashRegister].name,"atiende el Cliente Dummy ",self.id, " en un tiempo de ",bt
@@ -167,7 +171,7 @@ class Client(Process):
                 print now(),"Fin Cliente Dummy",self.id
             else:
                 #entra aleatoriamente en caja de una sola cola
-                print now(),"Cliente Dummy ",self.id, "entra en caja ",G.awsmeCashRegisterManager.name
+                print now(),"Cliente Dummy ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.awsmeCashRegisterManager.name
                 yield request,self,G.awsmeCashRegisterManager
                 G.awsemCashWaitTime.observe(now()-self.arrivalTime)
                 at = random.uniform(1,awsmeServiceRate)*self.cartQty
@@ -205,7 +209,7 @@ def imprimirInfoReplicas():
     
         print "En boring el tiempo promedio de espera en cola: " , G.boringCashWaitTimeRep.mean()
         
-        print "En awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTime.mean()
+        print "En awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTimeRep.mean()
         
         print "En boring el tiempo promedio de servicio: " ,G.boringCashServiceTimeRep.mean()
         
@@ -220,6 +224,8 @@ def imprimirInfoReplicas():
         print 'Cantidad de clientes atendidos en boring', G.actMonBorRep.mean()
         
         print 'Cantidad de clientes atendidos en awesome', G.actMonAwsRep.mean()
+
+        print 'cantidad de veces que se encontro una fila vacia ', G.timesFreeBoringCR
     
     
 
@@ -277,12 +283,12 @@ bsr = 1.5
 awsr = 1.5
 maxCS = 50
 totalCashRegisters = 10
-cantReplicas = 2  # cantidad de replicas por simulacion
+cantReplicas = 1  # cantidad de replicas por simulacion
 fastCashRegister = 1  # cantidad de cajas rpidas
 
 model(maxtime=1100, boringCashRegisterQTY=4, boringServiceRate=2,
           awsmeCashRegisterQTY=4, awsmeServiceRate=2,
-          clientArrivalsRate={0: 1, 500: 2, 800: 5}, maxCartSize=100, replicas=2)
+          clientArrivalsRate={0: 1, 500: 2, 800: 5}, maxCartSize=100, replicas=cantReplicas)
 
 #model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,
 #          awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
