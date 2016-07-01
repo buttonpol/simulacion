@@ -1,4 +1,4 @@
-from SimPy.Simulation import *
+﻿from SimPy.Simulation import *
 import random
 import numpy as np
 import math
@@ -7,7 +7,7 @@ import math
 #variables para mostrar resultados
 resAvgWaitingBoringCR = 0
 resAvgWaitingAwsCR = 0
-resAvgWatingFastCR  = 0
+resAvgWatingFastCR = 0
 resAvgServiceBoringCR = 0
 resAvgServiceAwsCR = 0
 resAvgServiceFastCR = 0
@@ -34,8 +34,6 @@ class G:
     actMonAws = Monitor('Cantidad de clientes atendidas awesome')
     
     ### MONITORES REPLICAS ###
-    
-    awsmeCashRegisterManagerRep = "Administrador de cajas de una sola cola" #vendria ser el cartel q le dice al cliente a q caja tiene q ir
     awsemCashWaitTimeRep = Monitor('Tiempo de espera en cajas compartidas')
     awsemCashServiceTimeRep = Monitor('Tiempo de servicio en cajas compartidas')
 
@@ -49,16 +47,13 @@ class G:
     waitMonAwsRep = Monitor('Cantidad de clientes en cola awesome')
 
     #contadores de elementos en colas
-
-
-
 class Arrivals(Process):
     
     def run(self,clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate):
         i = 0
         r = 0
-        lastRateVisited = False
         arrivals = clientArrivalsRate.keys()
+        arrivals.sort()
         while(True):    
             
             type = "smartClient"
@@ -67,16 +62,14 @@ class Arrivals(Process):
                 
             c = Client(str(i),type,random.uniform(1,maxCartSize)) 
             activate(c, c.run(boringServiceRate,awsmeServiceRate))
-            # calcula el tiempo del prox arribo...
-            if(i != 0 and arrivals[r] <= int(now()) and lastRateVisited == False):
-                r+=1  #cambia la tasa de arribo para el tiempo especificado
-                if(r < len(arrivals)):
+
+            if(r < len(arrivals)-1):
+                if(i != 0 and arrivals[r + 1] <= now()):
+                    r+=1
                     print "**********************************************"
                     print "* TASA DE ARRIBO: ",clientArrivalsRate[arrivals[r]],"                        *"
                     print "**********************************************"
-                else:
-                    r-=1
-                    lastRateVisited = True
+
             t = random.expovariate(1. / clientArrivalsRate[arrivals[r]])
             yield hold, self, t
             i+=1
@@ -103,17 +96,18 @@ class Client(Process):
             boringCashRegisterIndex = 0
             allBoringBussy = True
             for i in range(len(G.boringCashRegister)):  # busca cajas individuales libres
-                bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ )
-                #bQQ = elementsInQueueBCR[i]+ len(G.boringCashRegister[i].activeQ )
+                bQQ = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ)
+                #bQQ = elementsInQueueBCR[i]+
+                #len(G.boringCashRegister[i].activeQ )
                 if(bQQ == 0):
                     print now(), ' Cliente ', self.id, " encontro caja ",G.boringCashRegister[i].name," vacia"
                     allBoringBussy = False
                     yield request,self,G.boringCashRegister[i]
                     G.boringCashWaitTime.observe(now() - self.arrivalTime)
                     elementsInQueueBCR[i] = elementsInQueueBCR[i] + self.cartQty
-                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
+                    print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[i].name
                     
-                    bt = random.uniform(1,boringServiceRate)*self.cartQty
+                    bt = random.uniform(0.1,boringServiceRate) * self.cartQty
                     G.boringCashServiceTime.observe(bt)
                     print now(),G.boringCashRegister[i].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
                     yield hold,self,bt
@@ -127,24 +121,31 @@ class Client(Process):
                     boringCashRegisterIndex = i
                   
             if(allBoringBussy):
-                #individuals = (np.sum(elementsInQueueBCR) + elementsInQueueFCR) / len(G.boringCashRegister)
-                #paralels = (len(G.awsmeCashRegisterManager.waitQ) + elementsInQueueACR) / G.awsmeCashRegisterQTY
+                #individuals = (np.sum(elementsInQueueBCR) +
+                #elementsInQueueFCR) / len(G.boringCashRegister)
+                #paralels = (len(G.awsmeCashRegisterManager.waitQ) +
+                #elementsInQueueACR) / G.awsmeCashRegisterQTY
 
 
-                individuals = len(G.boringCashRegister[i].waitQ) + len(G.boringCashRegister[i].activeQ ) / len(G.boringCashRegister)
+                individuals = len(G.boringCashRegister[boringCashRegisterIndex].waitQ) + len(G.boringCashRegister[boringCashRegisterIndex].activeQ)
                 paralels = (len(G.awsmeCashRegisterManager.waitQ) + len(G.awsmeCashRegisterManager.activeQ)) / G.awsmeCashRegisterQTY
 
-                #print 'len(G.awsmeCashRegisterManager.activeQ)', len(G.awsmeCashRegisterManager.activeQ), ' ; elementsInQueueACR', elementsInQueueACR, '; G.awsmeCashRegisterQTY ',  G.awsmeCashRegisterQTY
+                #print 'len(G.awsmeCashRegisterManager.activeQ)',
+                #len(G.awsmeCashRegisterManager.activeQ), ' ;
+                #elementsInQueueACR', elementsInQueueACR, ';
+                #G.awsmeCashRegisterQTY ', G.awsmeCashRegisterQTY
                 if (individuals < paralels):
-            #if(minBoringCashRegisterQQ < int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):  ## compara cual de los 2 tipos tiene menos
-                    print now(),"Cliente ",self.id, "llegado hace ",now()-self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+            #if(minBoringCashRegisterQQ <
+            #int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):
+            ### compara cual de los 2 tipos tiene menos
+                    print now(),"Cliente ",self.id, "llegado hace ",now() - self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
                     yield request,self,G.boringCashRegister[boringCashRegisterIndex]
-                    G.boringCashWaitTime.observe(now()-self.arrivalTime)
+                    G.boringCashWaitTime.observe(now() - self.arrivalTime)
                     #print 'hola ', elementsInQueueACR
                     #elementsInQueueACR = elementsInQueueACR + self.cartQty
                     #print 'chau ', elementsInQueueACR
-                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
-                    bt = random.uniform(1,boringServiceRate)*self.cartQty
+                    print now(),"Cliente ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                    bt = random.uniform(0.1,boringServiceRate) * self.cartQty
                     G.boringCashServiceTime.observe(bt)
                     print now(),G.boringCashRegister[boringCashRegisterIndex].name,"atiende el Cliente ",self.id, " en un tiempo de ",bt
                     yield hold,self,bt       
@@ -156,8 +157,8 @@ class Client(Process):
                     print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
                     yield request,self,G.awsmeCashRegisterManager
                     print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
-                    G.awsemCashWaitTime.observe(now()-self.arrivalTime)
-                    at = random.uniform(1,awsmeServiceRate)*self.cartQty
+                    G.awsemCashWaitTime.observe(now() - self.arrivalTime)
+                    at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
                     G.awsemCashServiceTime.observe(at)
                     print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
                     yield hold,self,at
@@ -167,11 +168,11 @@ class Client(Process):
         else: #cliente dummy
             
             if (random.uniform(0,1) < 0.50): #entra aleatoriamente en una caja individual
-                selectedCashRegister = int(random.uniform(0,len(G.boringCashRegister)-1))
+                selectedCashRegister = int(random.uniform(0,len(G.boringCashRegister) - 1))
                 yield request,self,G.boringCashRegister[selectedCashRegister]
-                G.boringCashWaitTime.observe(now()-self.arrivalTime)
-                print now(),"Cliente Dummy ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[selectedCashRegister].name
-                bt = random.uniform(1,boringServiceRate)*self.cartQty
+                G.boringCashWaitTime.observe(now() - self.arrivalTime)
+                print now(),"Cliente Dummy ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.boringCashRegister[selectedCashRegister].name
+                bt = random.uniform(0.1,boringServiceRate) * self.cartQty
                 G.boringCashServiceTime.observe(bt)
                 print now(),G.boringCashRegister[selectedCashRegister].name,"atiende el Cliente Dummy ",self.id, " en un tiempo de ",bt
                 yield hold,self,bt
@@ -180,10 +181,10 @@ class Client(Process):
                 print now(),"Fin Cliente Dummy",self.id
             else:
                 #entra aleatoriamente en caja de una sola cola
-                print now(),"Cliente Dummy ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.awsmeCashRegisterManager.name
+                print now(),"Cliente Dummy ",self.id, "espero ",now() - self.arrivalTime ," y entra en caja ",G.awsmeCashRegisterManager.name
                 yield request,self,G.awsmeCashRegisterManager
-                G.awsemCashWaitTime.observe(now()-self.arrivalTime)
-                at = random.uniform(1,awsmeServiceRate)*self.cartQty
+                G.awsemCashWaitTime.observe(now() - self.arrivalTime)
+                at = random.uniform(0.1,awsmeServiceRate) * self.cartQty
                 G.awsemCashServiceTime.observe(at)
                 print now(),G.awsmeCashRegisterManager.name,"atiende el Cliente ",self.id, " en un tiempo de ",at
                 yield hold,self,at
@@ -235,22 +236,18 @@ def imprimirInfoReplicas():
         
         print 'Cantidad de clientes atendidos en awesome', G.actMonAwsRep.mean()
 
-#        print 'cantidad de veces que se encontro una fila vacia ', G.timesFreeBoringCR
-    
-    
 
+    
 def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize, replicas):
-  #  resetMonitoresTotales()
+
     resetMonitoresReplicas()
     
     for r in range(replicas):
         initialize()
         # server definition
-        G.awsmeCashRegisterQTY = awsmeCashRegisterQTY
-            
+        G.awsmeCashRegisterQTY = awsmeCashRegisterQTY    
         cashRegisterGenerator(boringCashRegisterQTY,awsmeCashRegisterQTY)
-         #    resetMonitoresReplica()
-        
+
         #  exectuion
         a = Arrivals()
         activate(a, a.run(clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate))
@@ -288,17 +285,22 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
     imprimirInfoReplicas()
 
 
-maxTimeSim = 10000
+maxTimeSim = 840 # DE 8 AM A 22HS 14HS *60
 bsr = 0.5
 awsr = 0.5
 maxCS = 50
 totalCashRegisters = 10
-cantReplicas = 100  # cantidad de replicas por simulacion
+cantReplicas = 5  # cantidad de replicas por simulacion
 fastCashRegister = 1  # cantidad de cajas rpidas
 
-model(maxtime=1100, boringCashRegisterQTY=4, boringServiceRate=bsr,
-          awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
-          clientArrivalsRate={0: 1, 500: 2, 800: 5}, maxCartSize=100, replicas=cantReplicas)
+#clientArrivalsRate={0: 1, 500: 2, 800: 5} el super comienza su actividad 8 am,
+#los tiempos son en minutos, desde las 8 am tiempo 0 comienza con una tasa baja
+#de arribos hasta el medio dia luego de 240 minutos (4hs) es decir 12 am q
+#comienza a incrmentar tasa de arribo LUEGO desp de las (360) 3pm baja
+#nuevamente la tasa de arribos hasta las 8pm donde comienza otra ora pico
+model(maxtime=1100, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
+          clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5}, maxCartSize=100, replicas=cantReplicas)
+
 
 #model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,
 #          awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
