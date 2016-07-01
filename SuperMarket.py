@@ -384,10 +384,10 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
 
 
 maxTimeSim = 840 # DE 8 AM A 22HS 14HS *60
-bsr = 0.2
-awsr = 0.2
+bsr = 0.3
+awsr = 0.3
 maxCS = 50
-cantReplicas = 2  # cantidad de replicas por simulacion
+cantReplicas = 5  # cantidad de replicas por simulacion
 
 #clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5} el super comienza su actividad 8 am,
 #los tiempos son en minutos, desde las 8 am tiempo 0 comienza con una tasa baja
