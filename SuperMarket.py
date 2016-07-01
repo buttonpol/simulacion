@@ -35,31 +35,50 @@ class G:
     #contadores de elementos en colas
 class Arrivals(Process):
     
-    def run(self,clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate):
+    def run(self,clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate,clientsQTY):
         i = 0
         r = 0
         arrivals = clientArrivalsRate.keys()
         arrivals.sort()
-        while(True):    
+
+        if(clientsQTY==0):
+            while(True):    
             
-            type = "smartClient"
-            if (random.uniform(0,1) < 0.10):  # genera clientes tontos q no se fijan tamanio de la cola
-                type = "dummyClient"
+                type = "smartClient"
+                if (random.uniform(0,1) < 0.10):  # genera clientes tontos q no se fijan tamanio de la cola
+                    type = "dummyClient"
                 
-            c = Client(str(i),type,random.uniform(1,maxCartSize)) 
-            activate(c, c.run(boringServiceRate,awsmeServiceRate))
+                c = Client(str(i),type,random.uniform(1,maxCartSize)) 
+                activate(c, c.run(boringServiceRate,awsmeServiceRate))
 
-            if(r < len(arrivals) - 1):
-                if(i != 0 and arrivals[r + 1] <= now()):
-                    r+=1
-                    print "**********************************************"
-                    print "* TASA DE ARRIBO: ",clientArrivalsRate[arrivals[r]],"                        *"
-                    print "**********************************************"
+                if(r < len(arrivals) - 1):
+                    if(i != 0 and arrivals[r + 1] <= now()):
+                        r+=1
+                        print "**********************************************"
+                        print "* TASA DE ARRIBO: ",clientArrivalsRate[arrivals[r]],"                        *"
+                        print "**********************************************"
 
-            t = random.expovariate(1. / clientArrivalsRate[arrivals[r]])
-            yield hold, self, t
-            i+=1
+                t = random.expovariate(1. / clientArrivalsRate[arrivals[r]])
+                yield hold, self, t
+                i+=1
+        else:
+            for n in range(clientsQTY):
+                type = "smartClient"
+                if (random.uniform(0,1) < 0.10):  # genera clientes tontos q no se fijan tamanio de la cola
+                    type = "dummyClient"
+                
+                c = Client(str(n),type,random.uniform(1,maxCartSize)) 
+                activate(c, c.run(boringServiceRate,awsmeServiceRate))
 
+                if(r < len(arrivals) - 1):
+                    if(i != 0 and arrivals[r + 1] <= now()):
+                        r+=1
+                        print "**********************************************"
+                        print "* TASA DE ARRIBO: ",clientArrivalsRate[arrivals[r]],"                        *"
+                        print "**********************************************"
+
+                t = random.expovariate(1. / clientArrivalsRate[arrivals[r]])
+                yield hold, self, t
 
 
 class Client(Process):
@@ -336,7 +355,7 @@ def imprimirInfoReplicas(boringCashRegisterQTY,awsmeCashRegisterQTY):
 
 
     
-def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize, replicas):
+def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,awsmeServiceRate,clientArrivalsRate,maxCartSize, replicas,clientsQTY):
 
     G.boringCashRegisterQTY = boringCashRegisterQTY
     G.awsmeCashRegisterQTY = awsmeCashRegisterQTY
@@ -351,7 +370,7 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
 
         #  exectuion
         a = Arrivals()
-        activate(a, a.run(clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate))
+        activate(a, a.run(clientArrivalsRate,maxCartSize,boringServiceRate,awsmeServiceRate,clientsQTY))
         simulate(until=maxtime)
 
         if(boringCashRegisterQTY > 0):        
@@ -384,15 +403,15 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
 
 
 maxTimeSim = 840 # DE 8 AM A 22HS 14HS *60
-bsr = 0.3
-awsr = 0.3
+bsr = 0.5
+awsr = 0.5
 maxCS = 50
-cantReplicas = 5  # cantidad de replicas por simulacion
+cantReplicas = 20  # cantidad de replicas por simulacion
 
 #clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5} el super comienza su actividad 8 am,
 #los tiempos son en minutos, desde las 8 am tiempo 0 comienza con una tasa baja
 #de arribos hasta el medio dia luego de 240 minutos (4hs) es decir 12 am q
 #comienza a incrmentar tasa de arribo LUEGO desp de las (360) 3pm baja
 #nuevamente la tasa de arribos hasta las 8pm donde comienza otra ora pico
-model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=0, awsmeServiceRate=awsr,
-          clientArrivalsRate={0: 8, 240: 1, 360: 5, 720: 0.5}, maxCartSize=100, replicas=cantReplicas)
+model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
+          clientArrivalsRate={0: 8, 240: 1, 360: 5, 720: 0.5}, maxCartSize=100, replicas=cantReplicas,clientsQTY=700)
