@@ -132,7 +132,8 @@ class Client(Process):
                 paralels = len(G.awsmeCashRegisterManager.activeQ) + G.elementsInQueueACR / G.awsmeCashRegisterQTY
                 if (individuals < paralels):
             #if(minBoringCashRegisterQQ < int(len(G.awsmeCashRegisterManager.waitQ)/G.awsmeCashRegisterQTY)):  ## compara cual de los 2 tipos tiene menos
-                    yield request,self,G.boringCashRegister[boringCashRegisterIndex]   
+                    print now(),"Cliente ",self.id, "llegado hace ",now()-self.arrivalTime ," hace cola en caja ",G.boringCashRegister[boringCashRegisterIndex].name
+                    yield request,self,G.boringCashRegister[boringCashRegisterIndex]
                     G.boringCashWaitTime.observe(now()-self.arrivalTime)
                     G.elementsInQueueACR = G.elementsInQueueACR + self.cartQty
                     print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.boringCashRegister[boringCashRegisterIndex].name
@@ -145,8 +146,9 @@ class Client(Process):
                     G.elementsInQueueACR = G.elementsInQueueACR - self.cartQty
                     print now(),"Fin Cliente",self.id
                 else:
-                    print now(),"Cliente ",self.id, "espero ",now()-self.arrivalTime ," y entra en caja ",G.awsmeCashRegisterManager.name
+                    print now(), "Cliente ", self.id, "llegado hace ", now() - self.arrivalTime, "hace cola en caja ", G.awsmeCashRegisterManager.name
                     yield request,self,G.awsmeCashRegisterManager
+                    print now(), "Cliente ", self.id, "espero -", now() - self.arrivalTime, "- y entra en caja ", G.awsmeCashRegisterManager.name
                     G.awsemCashWaitTime.observe(now()-self.arrivalTime)
                     at = random.uniform(1,awsmeServiceRate)*self.cartQty
                     G.awsemCashServiceTime.observe(at)
