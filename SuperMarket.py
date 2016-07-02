@@ -48,7 +48,7 @@ class Arrivals(Process):
                 if (random.uniform(0,1) < 0.10):  # genera clientes tontos q no se fijan tamanio de la cola
                     type = "dummyClient"
                 
-                c = Client(str(i),type,50) 
+                c = Client(str(i),type,random.uniform(1,maxCartSize)) 
                 activate(c, c.run(boringServiceRate,awsmeServiceRate))
 
                 if(r < len(arrivals) - 1):
@@ -412,7 +412,7 @@ maxTimeSim = 840 # DE 8 AM A 22HS 14HS *60
 bsr = 0.5
 awsr = 0.5
 maxCS = 50
-cantReplicas = 5  # cantidad de replicas por simulacion
+cantReplicas = 1000  # cantidad de replicas por simulacion
 
 #clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5} el super comienza su actividad 8 am,
 #los tiempos son en minutos, desde las 8 am tiempo 0 comienza con una tasa baja
