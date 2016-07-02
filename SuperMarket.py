@@ -48,7 +48,7 @@ class Arrivals(Process):
                 if (random.uniform(0,1) < 0.10):  # genera clientes tontos q no se fijan tamanio de la cola
                     type = "dummyClient"
                 
-                c = Client(str(i),type,random.uniform(1,maxCartSize)) 
+                c = Client(str(i),type,50) 
                 activate(c, c.run(boringServiceRate,awsmeServiceRate))
 
                 if(r < len(arrivals) - 1):
@@ -348,7 +348,7 @@ def imprimirInfoReplicas(boringCashRegisterQTY,awsmeCashRegisterQTY):
             print 'Cantidad de clientes atendidos en boring', G.actMonBorRep.mean()      
 
         if(awsmeCashRegisterQTY > 0):
-            print "En awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTimeRep.mean()
+            print "\nEn awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTimeRep.mean()
             print "En awesome el tiempo promedio de servicio: " ,G.awsemCashServiceTimeRep.mean()
             print'Cantidad de clientes promedio en cola awesome: ' , G.waitMonAwsRep.mean()        
             print 'Cantidad de clientes atendidos en awesome', G.actMonAwsRep.mean()
@@ -378,6 +378,7 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
             G.boringCashWaitTimeRep.observe(G.boringCashWaitTime.mean())
             print "En boring el tiempo promedio de servicio: " ,G.boringCashServiceTime.mean()
             G.boringCashServiceTimeRep.observe(G.boringCashServiceTime.mean())      
+            G.boringCashServiceTime.reset()
 
             waitMonBorCashtAvg = Monitor('Cantidad de clientes promedio en cola boring') 
             for i in range(boringCashRegisterQTY):
@@ -385,19 +386,24 @@ def model(maxtime,boringCashRegisterQTY,boringServiceRate,awsmeCashRegisterQTY,a
             
             print'Cantidad de clientes promedio en cola boring: ', waitMonBorCashtAvg.mean()
             G.waitMonBorRep.observe(waitMonBorCashtAvg.mean())
+            waitMonBorCashtAvg.reset()
             print 'Cantidad de clientes atendidos en boring', G.actMonBor.total()
             G.actMonBorRep.observe(G.actMonBor.total())
-        
+            G.actMonBor.reset()
 
-        if(awsmeCashRegisterQTY > 0):
-            print 'Cantidad de clientes atendidos en awesome', G.actMonAws.total()        
-            print "En awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTime.mean()
+        if(awsmeCashRegisterQTY > 0): 
+            print "\n\nEn awesome el tiempo promedio de espera en cola: ", G.awsemCashWaitTime.mean()
             G.awsemCashWaitTimeRep.observe(G.awsemCashWaitTime.mean())
+            G.awsemCashWaitTime.reset()
             print "En awesome el tiempo promedio de servicio: " ,G.awsemCashServiceTime.mean()
             G.awsemCashServiceTimeRep.observe(G.awsemCashServiceTime.mean())
+            G.awsemCashServiceTime.reset()
             print'Cantidad de clientes promedio en cola awesome: ' , G.awsmeCashRegisterManager.waitMon.timeAverage()  
-            G.waitMonAwsRep.observe(G.awsmeCashRegisterManager.waitMon.timeAverage()) 
+            G.waitMonAwsRep.observe(G.awsmeCashRegisterManager.waitMon.timeAverage())           
+            print 'Cantidad de clientes atendidos en awesome', G.actMonAws.total()       
             G.actMonAwsRep.observe(G.actMonAws.total())
+            G.actMonAws.reset()
+            
 
     imprimirInfoReplicas(boringCashRegisterQTY,awsmeCashRegisterQTY)
 
@@ -406,7 +412,7 @@ maxTimeSim = 840 # DE 8 AM A 22HS 14HS *60
 bsr = 0.5
 awsr = 0.5
 maxCS = 50
-cantReplicas = 20  # cantidad de replicas por simulacion
+cantReplicas = 5  # cantidad de replicas por simulacion
 
 #clientArrivalsRate={0: 0.08, 240: 2, 360: 0.09, 720: 5} el super comienza su actividad 8 am,
 #los tiempos son en minutos, desde las 8 am tiempo 0 comienza con una tasa baja
@@ -414,4 +420,4 @@ cantReplicas = 20  # cantidad de replicas por simulacion
 #comienza a incrmentar tasa de arribo LUEGO desp de las (360) 3pm baja
 #nuevamente la tasa de arribos hasta las 8pm donde comienza otra ora pico
 model(maxtime=maxTimeSim, boringCashRegisterQTY=4, boringServiceRate=bsr,awsmeCashRegisterQTY=4, awsmeServiceRate=awsr,
-          clientArrivalsRate={0: 8, 240: 1, 360: 5, 720: 0.5}, maxCartSize=100, replicas=cantReplicas,clientsQTY=700)
+          clientArrivalsRate={0: 8, 240: 1, 360: 5, 720: 0.5}, maxCartSize=100, replicas=cantReplicas,clientsQTY=0)
